@@ -22,6 +22,7 @@ public class Event {
         this.eventType = eventType;
         this.item = item;
         this.timestamp = timestamp;
+
     }
 
     public Event(EventType eventType, int discountPercentage, LocalDateTime timestamp) {

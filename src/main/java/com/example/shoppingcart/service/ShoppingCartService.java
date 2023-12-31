@@ -61,13 +61,13 @@ public class ShoppingCartService {
         return shoppingCart.getTotalAmount();
     }
 
-    private void validateQuantity(int quantity) {
+    public void validateQuantity(int quantity) {
         if (quantity < 1 || quantity > 1000) {
       throw new ItemQuantityExceedsException("Quantity must be between 1 and 1000.");
         }
     }
 
-    private void validateDiscountPercentage(int discountPercentage) {
+    public void validateDiscountPercentage(int discountPercentage) {
         if (discountPercentage < 0 || discountPercentage > 100) {
       throw new DiscountValidationException("Discount percentage must be between 0 and 100.");
         }
