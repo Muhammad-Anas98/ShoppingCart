@@ -1,4 +1,4 @@
-package com.example.shoppingcart.constant;
+package com.example.shoppingcart.util;
 
 import java.util.Map;
 
@@ -10,4 +10,8 @@ public class Constants {
             "DISCOUNT_40", 40,
             "DISCOUNT_50", 50
     );
+
+    public static final String USER_UUID = "User-UUID";
+
+    public static final Long DUMMY_ORDER_ID = 3412762L;
 }

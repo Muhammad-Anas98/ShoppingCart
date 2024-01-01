@@ -3,19 +3,20 @@ package com.example.shoppingcart.data;
 import com.example.shoppingcart.data.dao.Item;
 import com.example.shoppingcart.data.dto.CartItemRequest;
 import com.example.shoppingcart.data.dto.DiscountRequest;
-import com.example.shoppingcart.exception.DiscountValidationException;
-import com.example.shoppingcart.exception.ItemQuantityExceedsException;
+import com.example.shoppingcart.exception.ItemNotFoundException;
+import com.example.shoppingcart.exception.ItemQuantityException;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.example.shoppingcart.constant.Constants.DISCOUNTS;
+import static com.example.shoppingcart.util.Constants.DISCOUNTS;
 
 @Component
+@Log4j2
 public class ShoppingCart {
 
     private final Map<String, Item> shoppingCart = new ConcurrentHashMap<>();
@@ -26,6 +27,9 @@ public class ShoppingCart {
     }
 
     public Item removeItem(String sku) {
+        if(!shoppingCart.containsKey(sku)){
+            throw new ItemNotFoundException("Item not found in cart.");
+        }
         return shoppingCart.remove(sku);
     }
 
@@ -35,9 +39,20 @@ public class ShoppingCart {
 
     public void changeQuantity(CartItemRequest cartItemRequest) {
         String sku = cartItemRequest.getSku();
+
+        if(!shoppingCart.containsKey(sku)){
+            throw new ItemNotFoundException("Item not found in cart.");
+        }
+
         shoppingCart.computeIfPresent(sku, (k, existingItem) -> {
-            if((existingItem.getQuantity() + cartItemRequest.getQuantity()) > 1000){
-                throw new ItemQuantityExceedsException("Quantity must be between 1 and 1000.");
+            int computedQuantity = existingItem.getQuantity() + cartItemRequest.getQuantity();
+            if(computedQuantity > 1000){
+                throw new ItemQuantityException("Overall Quantity must be less than 1000.");
+            }
+
+            if(computedQuantity <= 0){
+                //we can send event here remove as the quantity goes below 0 and we are removing it
+                return null;
             }
 
             existingItem.setQuantity(existingItem.getQuantity() + cartItemRequest.getQuantity());
@@ -45,11 +60,12 @@ public class ShoppingCart {
         });
     }
 
-    public void applyDiscount(DiscountRequest discountRequest) {
-        if(!DISCOUNTS.containsKey(discountRequest.getDiscountCode()) || discountPercentage != null) {
-            throw new DiscountValidationException("Discount cant be applied.");
+    public int applyDiscount(DiscountRequest discountRequest) {
+        if (discountPercentage != null) {
+            log.warn("Discount already applied.");
         }
-        discountPercentage = discountRequest.getDiscountPercentage();
+        discountPercentage = DISCOUNTS.get(discountRequest.getDiscountCode());
+        return discountPercentage;
     }
 
     public Map<String, Item> getItems() {

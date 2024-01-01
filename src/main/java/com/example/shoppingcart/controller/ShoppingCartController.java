@@ -4,24 +4,24 @@ import com.example.shoppingcart.data.dao.Item;
 import com.example.shoppingcart.data.dto.CartItemRequest;
 import com.example.shoppingcart.data.dto.DiscountRequest;
 import com.example.shoppingcart.service.ShoppingCartService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
-import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/cart")
+@RequiredArgsConstructor
+@Validated
 public class ShoppingCartController {
 
     private final ShoppingCartService shoppingCartService;
 
-    public ShoppingCartController(ShoppingCartService shoppingCartService) {
-        this.shoppingCartService = shoppingCartService;
-    }
-
     @PostMapping("/add")
-    public ResponseEntity<String> addItemToCart(@RequestBody CartItemRequest cartItemRequest) {
+    public ResponseEntity<String> addItemToCart(@Valid @RequestBody CartItemRequest cartItemRequest) {
       shoppingCartService.addItemToCart(cartItemRequest);
       return ResponseEntity.ok("Item added to the cart successfully.");
     }
@@ -38,20 +38,20 @@ public class ShoppingCartController {
         return ResponseEntity.ok("Cart emptied successfully.");
     }
 
-    @PutMapping("/changeQuantity")
-    public ResponseEntity<String> changeItemQuantity(@RequestBody CartItemRequest cartItemRequest) {
-      shoppingCartService.changeItemQuantity(cartItemRequest);
+    @PatchMapping("/update/{sku}/{quantity}")
+    public ResponseEntity<String> changeItemQuantity(@PathVariable String sku, @PathVariable int quantity) {
+      shoppingCartService.changeItemQuantity(new CartItemRequest(sku, quantity, null, null));
       return ResponseEntity.ok("Item quantity updated successfully.");
     }
 
-    @PostMapping("/applyDiscount")
-    public ResponseEntity<String> applyDiscount(@RequestBody DiscountRequest discountRequest) {
+    @PostMapping("/apply-discount")
+    public ResponseEntity<String> applyDiscount(@RequestBody @Valid DiscountRequest discountRequest) {
       shoppingCartService.applyDiscount(discountRequest);
       return ResponseEntity.ok("Discount applied successfully.");
     }
 
     @GetMapping("/items")
-    public ResponseEntity<Map<String, Item>> getCartItems() {
+    public ResponseEntity<List<Item>> getCartItems() {
         return ResponseEntity.ok(shoppingCartService.getCartItems());
     }
 

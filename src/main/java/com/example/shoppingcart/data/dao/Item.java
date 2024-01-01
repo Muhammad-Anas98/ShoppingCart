@@ -2,8 +2,6 @@ package com.example.shoppingcart.data.dao;
 
 import com.example.shoppingcart.data.dto.CartItemRequest;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.*;
 
@@ -16,14 +14,9 @@ import java.math.BigDecimal;
 public class Item {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     private String sku;
     private int quantity;
-
     private String displayName;
-
     private BigDecimal price;
 
     public Item(String sku, int quantity, String displayName, BigDecimal price) {

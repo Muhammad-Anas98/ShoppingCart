@@ -5,12 +5,11 @@ import com.example.shoppingcart.data.dao.Item;
 import com.example.shoppingcart.data.dto.CartItemRequest;
 import com.example.shoppingcart.data.dto.DiscountRequest;
 import com.example.shoppingcart.exception.DiscountValidationException;
-import com.example.shoppingcart.exception.ItemQuantityExceedsException;
+import com.example.shoppingcart.exception.ItemQuantityException;
 import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.util.Map;
-
+import static com.example.shoppingcart.util.TestUtility.getCartItemRequest;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ShoppingCartTest {
@@ -19,7 +18,7 @@ class ShoppingCartTest {
     void testAddItem() {
         ShoppingCart shoppingCart = new ShoppingCart();
 
-        CartItemRequest cartItemRequest = getCartItemRequest();
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
         Map<String, Item> items = shoppingCart.getItems();
@@ -33,7 +32,7 @@ class ShoppingCartTest {
     void testRemoveItem() {
         ShoppingCart shoppingCart = new ShoppingCart();
 
-        CartItemRequest cartItemRequest = getCartItemRequest();
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
         Item removedItem = shoppingCart.removeItem("SKU123");
@@ -46,7 +45,7 @@ class ShoppingCartTest {
     void testEmptyCart() {
         ShoppingCart shoppingCart = new ShoppingCart();
 
-        CartItemRequest cartItemRequest = getCartItemRequest();
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
         shoppingCart.emptyCart();
@@ -58,10 +57,10 @@ class ShoppingCartTest {
     void testChangeQuantity() {
         ShoppingCart shoppingCart = new ShoppingCart();
 
-        CartItemRequest cartItemRequest = getCartItemRequest();
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
-        CartItemRequest updatedCartItemRequest = new CartItemRequest("SKU123", 7, "shoes", BigDecimal.valueOf(100));
+        CartItemRequest updatedCartItemRequest = getCartItemRequest(7, BigDecimal.valueOf(100));
         shoppingCart.changeQuantity(updatedCartItemRequest);
 
         Map<String, Item> items = shoppingCart.getItems();
@@ -75,23 +74,23 @@ class ShoppingCartTest {
     void testChangeQuantityExceedsLimit() {
         ShoppingCart shoppingCart = new ShoppingCart();
 
-        CartItemRequest cartItemRequest = getCartItemRequest();
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
-        CartItemRequest updatedCartItemRequest = new CartItemRequest("SKU123", 1000, "shoes", BigDecimal.valueOf(100));
+        CartItemRequest updatedCartItemRequest = getCartItemRequest(1000, BigDecimal.valueOf(100));
 
-        ItemQuantityExceedsException exception = assertThrows(ItemQuantityExceedsException.class,
+        ItemQuantityException exception = assertThrows(ItemQuantityException.class,
                 () -> shoppingCart.changeQuantity(updatedCartItemRequest));
 
-        assertEquals("Quantity must be between 1 and 1000.", exception.getMessage());
+        assertEquals("Overall Quantity must be less than 1000.", exception.getMessage());
     }
 
     @Test
     void testApplyDiscount() {
         ShoppingCart shoppingCart = new ShoppingCart();
-        DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10", 10);
+        DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10");
 
-        shoppingCart.addItem(getCartItemRequest());
+        shoppingCart.addItem(getCartItemRequest(2, BigDecimal.valueOf(100)));
         shoppingCart.applyDiscount(discountRequest);
 
         assertEquals(180, shoppingCart.getTotalAmount().intValue());
@@ -100,14 +99,14 @@ class ShoppingCartTest {
     @Test
     void testApplyDiscountTwice() {
         ShoppingCart shoppingCart = new ShoppingCart();
-        DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10", 10);
+        DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10");
 
         shoppingCart.applyDiscount(discountRequest);
 
         DiscountValidationException exception = assertThrows(DiscountValidationException.class,
                 () -> shoppingCart.applyDiscount(discountRequest));
 
-        assertEquals("Discount cant be applied.", exception.getMessage());
+        assertEquals("Discount already applied.", exception.getMessage());
     }
 
     @Test
@@ -116,7 +115,7 @@ class ShoppingCartTest {
 
         assertTrue(shoppingCart.getItems().isEmpty());
 
-        CartItemRequest cartItemRequest = new CartItemRequest("SKU123", 4, "shoes", BigDecimal.valueOf(100));
+        CartItemRequest cartItemRequest = getCartItemRequest(4, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
         assertFalse(shoppingCart.getItems().isEmpty());
@@ -126,7 +125,7 @@ class ShoppingCartTest {
     void testGetTotalAmount() {
         ShoppingCart shoppingCart = new ShoppingCart();
 
-        CartItemRequest cartItemRequest = new CartItemRequest("SKU123", 2, "shoes", BigDecimal.valueOf(100));
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
         assertEquals(200, shoppingCart.getTotalAmount().intValue());
@@ -136,7 +135,7 @@ class ShoppingCartTest {
     @Test
     void testGetItemsUnmodifiable() {
         ShoppingCart shoppingCart = new ShoppingCart();
-        CartItemRequest cartItemRequest = new CartItemRequest("SKU123", 5, "shoes", BigDecimal.valueOf(100));
+        CartItemRequest cartItemRequest = getCartItemRequest(5, BigDecimal.valueOf(100));
         shoppingCart.addItem(cartItemRequest);
 
         Map<String, Item> items = shoppingCart.getItems();
@@ -148,18 +147,14 @@ class ShoppingCartTest {
     @Test
     void testGetTotalAmountWithDiscount() {
         ShoppingCart shoppingCart = new ShoppingCart();
-        CartItemRequest cartItemRequest = new CartItemRequest("SKU123", 5, "shoes", BigDecimal.valueOf(10));
+        CartItemRequest cartItemRequest = getCartItemRequest(5, BigDecimal.valueOf(10));
         shoppingCart.addItem(cartItemRequest);
 
-        DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10", 10);
+        DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10");
         shoppingCart.applyDiscount(discountRequest);
 
         assertEquals(45, shoppingCart.getTotalAmount().intValue());
     }
 
-
-    CartItemRequest getCartItemRequest() {
-        return new CartItemRequest("SKU123", 2, "shoes", BigDecimal.valueOf(100));
-    }
 }
 

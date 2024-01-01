@@ -1,4 +1,4 @@
-package com.example.shoppingcart.constant;
+package com.example.shoppingcart.util;
 
 public enum EventType {
     ADD_ITEM,

@@ -3,10 +3,9 @@ package com.example.shoppingcart.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class DiscountValidationException extends IllegalArgumentException {
-
-    public DiscountValidationException(String message) {
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public class ItemNotFoundException extends RuntimeException {
+    public ItemNotFoundException(String message) {
         super(message);
     }
 }

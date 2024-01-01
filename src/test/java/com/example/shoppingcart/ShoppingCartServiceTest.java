@@ -1,13 +1,13 @@
 package com.example.shoppingcart;
 
-import com.example.shoppingcart.constant.EventType;
+import com.example.shoppingcart.util.EventType;
 import com.example.shoppingcart.data.ShoppingCart;
 import com.example.shoppingcart.data.dao.Item;
 import com.example.shoppingcart.data.dto.CartItemRequest;
 import com.example.shoppingcart.data.dto.DiscountRequest;
 
 import com.example.shoppingcart.exception.DiscountValidationException;
-import com.example.shoppingcart.exception.ItemQuantityExceedsException;
+import com.example.shoppingcart.exception.ItemQuantityException;
 import com.example.shoppingcart.service.EventService;
 import com.example.shoppingcart.service.ShoppingCartService;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,9 +17,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
+import static com.example.shoppingcart.util.TestUtility.getCartItemRequest;
+import static com.example.shoppingcart.util.TestUtility.getItemsMap;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -42,15 +44,15 @@ class ShoppingCartServiceTest {
 
     @Test
     void testAddItemToCart() {
-        CartItemRequest cartItemRequest = getCartItemRequest();
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
 
-        when(shoppingCart.getItems()).thenReturn(Collections.singletonMap("SKU123", new Item("SKU123", 2, "shoes", BigDecimal.valueOf(100))));
-        doNothing().when(eventService).recordCartAddEvent(EventType.ADD_ITEM, cartItemRequest);
+        when(shoppingCart.getItems()).thenReturn(getItemsMap(2, BigDecimal.valueOf(100)));
+        doNothing().when(eventService).recordCartEvent(EventType.ADD_ITEM, cartItemRequest);
 
         shoppingCartService.addItemToCart(cartItemRequest);
 
         verify(shoppingCart, times(1)).addItem(cartItemRequest);
-        verify(eventService, times(1)).recordCartAddEvent(EventType.ADD_ITEM, cartItemRequest);
+        verify(eventService, times(1)).recordCartEvent(EventType.ADD_ITEM, cartItemRequest);
     }
 
     @Test
@@ -58,50 +60,50 @@ class ShoppingCartServiceTest {
         String sku = "SKU123";
         Item removedItem = new Item("SKU123", 2, "shoes", BigDecimal.valueOf(100));
 
-        when(shoppingCart.getItems()).thenReturn(Collections.singletonMap("SKU123", new Item("SKU123", 2, "shoes", BigDecimal.valueOf(100))));
+        when(shoppingCart.getItems()).thenReturn(getItemsMap(2, BigDecimal.valueOf(100)));
 
         when(shoppingCart.removeItem(sku)).thenReturn(removedItem);
-        doNothing().when(eventService).recordCartAddEvent(EventType.REMOVE_ITEM, removedItem.convertToCartItemDto());
+        doNothing().when(eventService).recordCartEvent(EventType.REMOVE_ITEM, removedItem.convertToCartItemDto());
 
         shoppingCartService.removeItemFromCart(sku);
 
         verify(shoppingCart, times(1)).removeItem(sku);
-        verify(eventService, times(1)).recordCartAddEvent(EventType.REMOVE_ITEM, removedItem.convertToCartItemDto());
+        verify(eventService, times(1)).recordCartEvent(EventType.REMOVE_ITEM, removedItem.convertToCartItemDto());
     }
 
     @Test
     void testEmptyCart() {
         doNothing().when(shoppingCart).emptyCart();
-        doNothing().when(eventService).recordCartAddEvent(EventType.EMPTY_CART, null);
+        doNothing().when(eventService).recordCartEvent(EventType.EMPTY_CART);
 
         shoppingCartService.emptyCart();
 
         verify(shoppingCart, times(1)).emptyCart();
-        verify(eventService, times(1)).recordCartAddEvent(EventType.EMPTY_CART, null);
+        verify(eventService, times(1)).recordCartEvent(EventType.EMPTY_CART);
     }
 
     @Test
     void testChangeItemQuantity() {
-        CartItemRequest cartItemRequest = getCartItemRequest();
+        CartItemRequest cartItemRequest = getCartItemRequest(2, BigDecimal.valueOf(100));
 
-        when(shoppingCart.getItems()).thenReturn(Collections.singletonMap("SKU123", new Item("SKU123", 2, "shoes", BigDecimal.valueOf(100))));
+        when(shoppingCart.getItems()).thenReturn(getItemsMap(2, BigDecimal.valueOf(100)));
         when(shoppingCart.getTotalAmount()).thenReturn(BigDecimal.valueOf(200));
         doNothing().when(shoppingCart).changeQuantity(cartItemRequest);
-        doNothing().when(eventService).recordCartAddEvent(EventType.UPDATE_ITEM, cartItemRequest);
+        doNothing().when(eventService).recordCartEvent(EventType.UPDATE_ITEM, cartItemRequest);
 
         shoppingCartService.changeItemQuantity(cartItemRequest);
 
         verify(shoppingCart, times(1)).changeQuantity(cartItemRequest);
-        verify(eventService, times(1)).recordCartAddEvent(EventType.UPDATE_ITEM, cartItemRequest);
+        verify(eventService, times(1)).recordCartEvent(EventType.UPDATE_ITEM, cartItemRequest);
     }
 
 
     @Test
     void testApplyDiscount() {
-        DiscountRequest discountRequest = new DiscountRequest("DISC10", 10);
+        DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10");
 
         when(shoppingCart.getTotalAmount()).thenReturn(BigDecimal.valueOf(180));
-        doNothing().when(shoppingCart).applyDiscount(discountRequest);
+        when(shoppingCart.applyDiscount(discountRequest)).thenReturn(10);
         doNothing().when(eventService).recordDiscountEvent(EventType.APPLY_DISCOUNT, 10);
 
         shoppingCartService.applyDiscount(discountRequest);
@@ -112,13 +114,13 @@ class ShoppingCartServiceTest {
 
     @Test
     void testGetCartItems() {
-        Map<String, Item> items = Collections.singletonMap("SKU123", new Item("SKU123", 2, "shoes", BigDecimal.valueOf(100)));
+        Map<String, Item> items = getItemsMap(2, BigDecimal.valueOf(100));
 
         when(shoppingCart.getItems()).thenReturn(items);
 
-        Map<String, Item> result = shoppingCartService.getCartItems();
+        List<Item> result = shoppingCartService.getCartItems();
 
-        assertEquals(items, result);
+        assertEquals(items.values().stream().toList(), result);
     }
 
     @Test
@@ -139,7 +141,7 @@ class ShoppingCartServiceTest {
 
     @Test
     void testValidateQuantityInvalid() {
-        ItemQuantityExceedsException exception = assertThrows(ItemQuantityExceedsException.class,
+        ItemQuantityException exception = assertThrows(ItemQuantityException.class,
                 () -> shoppingCartService.validateQuantity(1001));
 
         assertEquals("Quantity must be between 1 and 1000.", exception.getMessage());
@@ -147,18 +149,14 @@ class ShoppingCartServiceTest {
 
     @Test
     void testValidateDiscountPercentageValid() {
-        assertDoesNotThrow(() -> shoppingCartService.validateDiscountPercentage(10));
+        assertDoesNotThrow(() -> shoppingCartService.validateDiscountPercentage("DISCOUNT_10"));
     }
 
     @Test
     void testValidateDiscountPercentageInvalid() {
         DiscountValidationException exception = assertThrows(DiscountValidationException.class,
-                () -> shoppingCartService.validateDiscountPercentage(-5));
+                () -> shoppingCartService.validateDiscountPercentage("DISCOUNT_101"));
 
-        assertEquals("Discount percentage must be between 0 and 100.", exception.getMessage());
-    }
-
-    CartItemRequest getCartItemRequest() {
-        return new CartItemRequest("SKU123", 2, "shoes", BigDecimal.valueOf(100));
+        assertEquals("Discount cant be applied.", exception.getMessage());
     }
 }
