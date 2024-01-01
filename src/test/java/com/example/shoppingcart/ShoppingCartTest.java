@@ -100,13 +100,13 @@ class ShoppingCartTest {
     void testApplyDiscountTwice() {
         ShoppingCart shoppingCart = new ShoppingCart();
         DiscountRequest discountRequest = new DiscountRequest("DISCOUNT_10");
+        shoppingCart.addItem(getCartItemRequest(2, BigDecimal.valueOf(100)));
 
         shoppingCart.applyDiscount(discountRequest);
+        shoppingCart.applyDiscount(discountRequest);
 
-        DiscountValidationException exception = assertThrows(DiscountValidationException.class,
-                () -> shoppingCart.applyDiscount(discountRequest));
 
-        assertEquals("Discount already applied.", exception.getMessage());
+        assertEquals(180, shoppingCart.getTotalAmount().intValue());
     }
 
     @Test
